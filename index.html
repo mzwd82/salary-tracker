@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>توزيع الراتب</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+  :root{--bg:#f4f6f9;--surface:#fff;--surface2:#f0f2f5;--border:#e2e6ed;--accent:#3b7ef8;--green:#16a34a;--red:#dc2626;--yellow:#d97706;--purple:#7c3aed;--text:#111827;--muted:#6b7280;--label:#374151;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'IBM Plex Sans Arabic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px 16px 48px;max-width:680px;margin:0 auto;}
+  #loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px;}
+  #loading .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+  #loading p{font-size:0.85rem;color:var(--muted);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #save-indicator{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;font-size:0.78rem;padding:6px 16px;border-radius:99px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:900;}
+  #save-indicator.show{opacity:1;}
+  #login-screen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:998;gap:20px;padding:32px;}
+  #login-screen.show{display:flex;}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 32px;text-align:center;max-width:340px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.07);}
+  .login-icon{font-size:2.5rem;margin-bottom:12px;}
+  .login-title{font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .login-sub{font-size:0.82rem;color:var(--muted);margin-bottom:24px;}
+  .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.9rem;font-weight:600;color:var(--text);width:100%;transition:all 0.15s;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  .google-btn:hover{background:var(--surface2);border-color:#aaa;}
+  .google-btn img{width:20px;height:20px;}
+  .logout-btn{background:none;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-family:inherit;font-size:0.75rem;padding:6px 12px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .logout-btn:hover{border-color:#fca5a5;color:var(--red);background:#fef2f2;}
+  .month-bar{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px;}
+  .month-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 13px;cursor:pointer;font-size:1rem;line-height:1;transition:all 0.15s;}
+  .month-btn:hover{background:var(--surface2);}
+  .month-btn:disabled{opacity:0.3;cursor:default;}
+  .month-select{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:0.95rem;font-weight:700;padding:8px 14px;outline:none;cursor:pointer;text-align:center;min-width:170px;transition:border-color 0.2s;}
+  .month-select:focus{border-color:var(--accent);}
+  .month-new-badge{font-size:0.68rem;background:#fef3c7;color:#b45309;border:1px solid #fde68a;border-radius:6px;padding:2px 8px;display:none;}
+  .month-new-badge.show{display:inline-block;}
+  .header{text-align:center;margin-bottom:24px;}
+  .header-label{font-size:0.72rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+  .salary-display{font-size:3rem;font-weight:700;color:var(--text);line-height:1;direction:ltr;display:inline-block;}
+  .salary-unit{font-size:1rem;font-weight:400;color:var(--muted);margin-right:4px;}
+  .salary-edit-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;}
+  .salary-edit-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.85rem;padding:6px 12px;width:150px;outline:none;text-align:center;transition:border-color 0.2s;}
+  .salary-edit-input:focus{border-color:var(--accent);}
+  .salary-edit-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-family:inherit;font-size:0.82rem;cursor:pointer;font-weight:600;}
+  .section{margin-bottom:24px;}
+  .section-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .section-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .section-title{font-size:0.78rem;font-weight:600;color:var(--label);letter-spacing:0.06em;}
+  .section-total{margin-right:auto;font-size:0.85rem;font-weight:700;direction:ltr;}
+  .accounts-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
+  .account-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,0.05);display:flex;flex-direction:column;}
+  .account-card.highlight{border-color:#c4b5fd;background:#faf5ff;}
+  .acc-badge{display:inline-block;font-size:0.6rem;padding:2px 7px;border-radius:99px;margin-bottom:7px;font-weight:600;align-self:flex-start;}
+  .badge-auto{background:#dcfce7;color:#15803d;}
+  .badge-fixed{background:#dbeafe;color:#1d4ed8;}
+  .badge-manual{background:#fef3c7;color:#b45309;}
+  .acc-name{font-size:0.72rem;color:var(--muted);margin-bottom:2px;}
+  .acc-number{font-size:0.65rem;color:#cbd5e1;margin-bottom:6px;}
+  .acc-value{font-size:1.05rem;font-weight:700;color:var(--text);direction:ltr;}
+  .acc-formula{font-size:0.63rem;color:var(--muted);margin-top:4px;}
+  .manual-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.92rem;font-weight:700;padding:5px 8px;width:100%;margin-top:6px;outline:none;transition:border-color 0.2s;direction:ltr;}
+  .manual-input:focus{border-color:var(--accent);}
+  .remaining-card{background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1.5px solid #bfdbfe;border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+  .remaining-label{font-size:0.85rem;color:#1d4ed8;font-weight:600;}
+  .remaining-sub{font-size:0.7rem;color:var(--muted);margin-top:3px;}
+  .remaining-value{font-size:1.9rem;font-weight:700;color:#1d4ed8;direction:ltr;}
+  .divider{height:1px;background:var(--border);margin:20px 0;}
+  .items-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+  .item-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:10px;transition:background 0.12s;}
+  .item-row:last-child{border-bottom:none;}
+  .item-row:hover{background:var(--surface2);}
+  .item-info{flex:1;min-width:0;}
+  .item-name{font-size:0.9rem;color:var(--text);font-weight:500;}
+  .item-note{font-size:0.7rem;color:var(--muted);margin-top:2px;}
+  .item-account-tag{font-size:0.65rem;color:var(--muted);background:var(--surface2);border-radius:4px;padding:1px 6px;margin-right:6px;border:1px solid var(--border);display:inline-block;}
+  .item-mini-bar{width:50px;background:var(--border);border-radius:99px;height:4px;flex-shrink:0;}
+  .item-mini-fill{height:4px;border-radius:99px;}
+  .item-amount{font-size:0.9rem;font-weight:700;color:var(--text);white-space:nowrap;min-width:90px;text-align:left;direction:ltr;}
+  .item-actions{display:flex;gap:4px;flex-shrink:0;}
+  .icon-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-size:0.78rem;padding:3px 7px;transition:all 0.15s;line-height:1.4;}
+  .icon-btn:hover{background:var(--surface2);color:var(--text);}
+  .icon-btn.del:hover{border-color:#fca5a5;color:var(--red);background:#fef2f2;}
+  .icon-btn.edit:hover{border-color:#93c5fd;color:var(--accent);background:#eff6ff;}
+  .add-row{display:flex;align-items:center;padding:10px 16px;gap:8px;cursor:pointer;color:var(--muted);font-size:0.8rem;background:transparent;border:none;width:100%;text-align:right;transition:color 0.15s;border-top:1px dashed var(--border);font-family:inherit;}
+  .add-row:hover{color:var(--accent);}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.12);}
+  .modal h3{font-size:0.95rem;margin-bottom:18px;color:var(--text);font-weight:700;}
+  .field{margin-bottom:12px;}
+  .field label{font-size:0.75rem;color:var(--label);display:block;margin-bottom:5px;font-weight:600;}
+  .field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:0.9rem;padding:9px 12px;outline:none;transition:border-color 0.2s;}
+  .field input:focus,.field select:focus{border-color:var(--accent);}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn{flex:1;padding:10px;border-radius:9px;font-family:inherit;font-size:0.88rem;font-weight:600;cursor:pointer;border:none;transition:opacity 0.15s;}
+  .btn:hover{opacity:0.85;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-ghost{background:var(--surface2);color:var(--label);border:1px solid var(--border);}
+  #main-content{display:none;}
+  #main-content.show{display:block;}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>جاري التحميل…</p></div>
+<div id="save-indicator">✓ تم الحفظ</div>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-icon">💰</div>
+    <div class="login-title">توزيع الراتب</div>
+    <div class="login-sub">سجّل دخولك للوصول إلى بياناتك من أي جهاز</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      تسجيل الدخول بـ Google
+    </button>
+  </div>
+</div>
+
+<div id="main-content">
+  <div class="month-bar">
+    <button class="month-btn" id="btn-prev" onclick="shiftMonth(-1)">&#8249;</button>
+    <select class="month-select" id="month-select" onchange="switchMonth(this.value)"></select>
+    <button class="month-btn" id="btn-next" onclick="shiftMonth(1)">&#8250;</button>
+    <span class="month-new-badge" id="new-badge">شهر جديد</span>
+    <button class="logout-btn" onclick="signOut()">خروج</button>
+  </div>
+
+  <div class="header">
+    <div class="header-label">الراتب الشهري</div>
+    <div><span class="salary-unit">KD</span><span class="salary-display" id="salary-display">—</span></div>
+    <div class="salary-edit-row">
+      <input class="salary-edit-input arabic-num" id="salary-input" type="text" inputmode="decimal" placeholder="تعديل الراتب">
+      <button class="salary-edit-btn" onclick="updateSalary()">تحديث</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-dot" style="background:#7c3aed"></div>
+      <span class="section-title">توزيع الحسابات</span>
+    </div>
+    <div class="accounts-grid">
+      <div class="account-card highlight">
+        <div class="acc-badge badge-auto">تلقائي</div>
+        <div class="acc-name">حساب الراتب</div>
+        <div class="acc-number">001</div>
+        <div class="acc-value" id="acc-001">—</div>
+        <div class="acc-formula">الراتب − 003 − 005 − بوبيان</div>
+      </div>
+      <div class="account-card">
+        <div class="acc-badge badge-auto">تلقائي</div>
+        <div class="acc-name">حساب المصروف</div>
+        <div class="acc-number">003</div>
+        <div class="acc-value" id="acc-003">—</div>
+        <div class="acc-formula">مصرف + رواتب العمالة</div>
+      </div>
+      <div class="account-card">
+        <div class="acc-badge badge-fixed">ثابت</div>
+        <div class="acc-name">حساب السايق</div>
+        <div class="acc-number">005</div>
+        <div class="acc-value">50.00 KD</div>
+      </div>
+      <div class="account-card">
+        <div class="acc-badge badge-manual">يدوي</div>
+        <div class="acc-name">خالد بوبيان</div>
+        <div class="acc-number">جلسات خالد</div>
+        <input class="manual-input arabic-num" id="acc-bobian" type="text" inputmode="decimal" placeholder="0" oninput="recalc(); scheduleSave();">
+      </div>
+    </div>
+    <div class="remaining-card">
+      <div>
+        <div class="remaining-label">المتبقي في حساب الراتب 001</div>
+        <div class="remaining-sub">بعد تحويل جميع الحسابات والالتزامات</div>
+      </div>
+      <div class="remaining-value" id="remaining-001">—</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div id="categories-wrap"></div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">إضافة بند جديد</h3>
+    <div class="field"><label>اسم البند</label><input type="text" id="new-name" placeholder="مثال: اشتراك نادي"></div>
+    <div class="field"><label>المبلغ (KD)</label><input type="text" inputmode="decimal" id="new-amount" class="arabic-num" placeholder="0.00"></div>
+    <div class="field"><label>التصنيف</label>
+      <select id="new-cat">
+        <option value="tabroo">تبرع</option>
+        <option value="aaila">مصاريف عائلية</option>
+        <option value="shakhsi">مصاريف شخصية</option>
+        <option value="omala">عمالة منزلية</option>
+      </select>
+    </div>
+    <div class="field"><label>الحساب</label>
+      <select id="new-account">
+        <option value="001">ح. الراتب 001</option>
+        <option value="003">ح. المصروف 003</option>
+        <option value="005">ح. السايق 005</option>
+        <option value="bobian">خالد بوبيان</option>
+      </select>
+    </div>
+    <div class="field"><label>ملاحظة (اختياري)</label><input type="text" id="new-note" placeholder="مثال: لغاية 12/2025"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveItem()">إضافة</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig={apiKey:"AIzaSyAUhBNpOVQbzuakExrg-4OYD8Ms5QJBbBw",authDomain:"salary-tracker-2e4f9.firebaseapp.com",databaseURL:"https://salary-tracker-2e4f9-default-rtdb.firebaseio.com",projectId:"salary-tracker-2e4f9",storageBucket:"salary-tracker-2e4f9.firebasestorage.app",messagingSenderId:"111595336000",appId:"1:111595336000:web:fd001eccd70995c0f9caa5"};
+const app=initializeApp(firebaseConfig);
+const db=getDatabase(app);
+const auth=getAuth(app);
+const provider=new GoogleAuthProvider();
+const dbRef=ref(db);
+let currentUid=null;
+
+window.signInWithGoogle=async function(){try{await signInWithPopup(auth,provider);}catch(e){console.error(e);}};
+window.signOut=async function(){await fbSignOut(auth);};
+
+onAuthStateChanged(auth,user=>{
+  document.getElementById('loading').style.display='none';
+  if(user){currentUid=user.uid;document.getElementById('login-screen').classList.remove('show');document.getElementById('main-content').classList.add('show');initApp();}
+  else{currentUid=null;document.getElementById('main-content').classList.remove('show');document.getElementById('login-screen').classList.add('show');}
+});
+
+function toEnDigits(s){return String(s).replace(/[٠١٢٣٤٥٦٧٨٩]/g,d=>d.charCodeAt(0)-1632).replace(/[۰۱۲۳۴۵۶۷۸۹]/g,d=>d.charCodeAt(0)-1776);}
+function parseNum(s){return parseFloat(toEnDigits(s))||0;}
+function bindArabicInputs(){
+  document.querySelectorAll('.arabic-num').forEach(el=>{
+    if(el._bound)return;el._bound=true;
+    el.addEventListener('input',function(){const p=this.selectionStart,c=toEnDigits(this.value);if(c!==this.value){this.value=c;try{this.setSelectionRange(p,p);}catch(e){}}});
+  });
+}
+
+const MONTH_AR=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function monthKey(y,m){return `${y}-${String(m+1).padStart(2,'0')}`;}
+function monthLabel(k){const[y,m]=k.split('-');return `${MONTH_AR[parseInt(m)-1]} ${y}`;}
+function currentMonthKey(){const d=new Date();return monthKey(d.getFullYear(),d.getMonth());}
+function allMonthKeys(year){return Array.from({length:12},(_,i)=>monthKey(year,i));}
+function prevMonthKey(k){const[y,m]=k.split('-').map(Number);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;}
+
+const DEFAULT_ITEMS=[
+  {id:1,name:'تبرع',amount:26,cat:'tabroo',account:'001',note:'',net:true},
+  {id:2,name:'قسط الأرض',amount:527,cat:'shakhsi',account:'001',note:'لغاية 28/09/2028',net:true},
+  {id:3,name:'مكالمات',amount:64,cat:'shakhsi',account:'001',note:'',net:true},
+  {id:4,name:'قسط الأسنان',amount:131,cat:'shakhsi',account:'001',note:'',net:true},
+  {id:5,name:'مصروف البنات الأسبوعي',amount:120,cat:'aaila',account:'001',note:'',net:true},
+  {id:6,name:'مصرف',amount:550,cat:'aaila',account:'003',note:'',net:false},
+  {id:7,name:'جولييتا',amount:150,cat:'omala',account:'003',note:'زيادة بالراتب ١٠ من 6/2025',net:false},
+  {id:8,name:'جين',amount:130,cat:'omala',account:'003',note:'أول راتب 5/2025',net:false},
+  {id:9,name:'شيخ السايق',amount:80,cat:'omala',account:'003',note:'زيادة بالراتب ١٠ من 5/2025',net:false},
+  {id:10,name:'جلسات خالد',amount:483,cat:'aaila',account:'bobian',note:'',net:false},
+];
+
+const CATS={tabroo:{label:'تبرع',dot:'#16a34a'},aaila:{label:'مصاريف عائلية',dot:'#3b7ef8'},shakhsi:{label:'مصاريف شخصية',dot:'#d97706'},omala:{label:'عمالة منزلية',dot:'#7c3aed'}};
+window.salary=2564.45;window.items=[];window.nextId=11;window.editingId=null;window.currentKey=null;
+const year=new Date().getFullYear();
+
+function userPath(key){return `users/${currentUid}/salaryTracker/${key}`;}
+
+function buildMonthSelect(selectedKey){
+  const sel=document.getElementById('month-select');sel.innerHTML='';
+  allMonthKeys(year).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=monthLabel(k);if(k===selectedKey)o.selected=true;sel.appendChild(o);});
+  updateArrows(selectedKey);
+}
+function updateArrows(key){const keys=allMonthKeys(year);document.getElementById('btn-prev').disabled=key===keys[0];document.getElementById('btn-next').disabled=key===keys[keys.length-1];}
+
+window.switchMonth=async function(key){
+  document.getElementById('loading').style.display='flex';
+  window.currentKey=key;updateArrows(key);
+  const snap=await get(child(dbRef,userPath(key)));let data=snap.val();
+  if(!data){
+    let srcKey=prevMonthKey(key),srcData=null;
+    for(let i=0;i<11;i++){const s=await get(child(dbRef,userPath(srcKey)));if(s.val()){srcData=s.val();break;}srcKey=prevMonthKey(srcKey);}
+    data=srcData?{salary:srcData.salary,bobian:srcData.bobian,items:JSON.parse(JSON.stringify(srcData.items)),nextId:srcData.nextId}:{salary:2564.45,bobian:483,items:JSON.parse(JSON.stringify(DEFAULT_ITEMS)),nextId:11};
+    await set(ref(db,userPath(key)),data);
+    document.getElementById('new-badge').classList.add('show');setTimeout(()=>document.getElementById('new-badge').classList.remove('show'),3000);
+  }else{document.getElementById('new-badge').classList.remove('show');}
+  window.salary=data.salary||2564.45;window.items=data.items||[];window.nextId=data.nextId||11;
+  document.getElementById('acc-bobian').value=data.bobian||0;
+  document.getElementById('salary-display').textContent=window.salary.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  recalc();bindArabicInputs();document.getElementById('loading').style.display='none';
+};
+
+window.shiftMonth=function(dir){const sel=document.getElementById('month-select');const opts=Array.from(sel.options);const idx=opts.findIndex(o=>o.value===window.currentKey);const next=idx+dir;if(next>=0&&next<opts.length){const key=opts[next].value;sel.value=key;switchMonth(key);}};
+
+let saveTimer=null;
+window.scheduleSave=function(){clearTimeout(saveTimer);saveTimer=setTimeout(saveMonth,800);};
+async function saveMonth(){
+  if(!currentUid)return;
+  const bobian=parseNum(document.getElementById('acc-bobian').value);
+  await set(ref(db,userPath(window.currentKey)),{salary:window.salary,bobian,items:window.items,nextId:window.nextId});
+  showSaveIndicator();
+}
+function showSaveIndicator(){const el=document.getElementById('save-indicator');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
+
+function fmt(n){return n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+' KD';}
+
+window.recalc=function(){
+  const bobian=parseNum(document.getElementById('acc-bobian').value);
+  const bobianItem=window.items.find(i=>i.account==='bobian');if(bobianItem)bobianItem.amount=bobian;
+  const acc003=window.items.filter(i=>i.account==='003').reduce((s,i)=>s+i.amount,0);
+  const acc001=window.salary-acc003-50-bobian;
+  const own001=window.items.filter(i=>i.account==='001').reduce((s,i)=>s+i.amount,0);
+  document.getElementById('acc-001').textContent=fmt(acc001);
+  document.getElementById('acc-003').textContent=fmt(acc003);
+  document.getElementById('remaining-001').textContent=fmt(acc001-own001);
+  renderCategories();bindArabicInputs();
+};
+
+function renderCategories(){
+  const wrap=document.getElementById('categories-wrap');wrap.innerHTML='';
+  Object.entries(CATS).forEach(([key,cat])=>{
+    const catItems=window.items.filter(i=>i.cat===key);const total=catItems.reduce((s,i)=>s+i.amount,0);
+    const sec=document.createElement('div');sec.className='section';
+    sec.innerHTML=`<div class="section-header"><div class="section-dot" style="background:${cat.dot}"></div><span class="section-title">${cat.label}</span><span class="section-total" style="color:${cat.dot}">${fmt(total)}</span></div><div class="items-card">${catItems.map(item=>itemRowHTML(item,total)).join('')}<button class="add-row" onclick="openModal(null,'${key}')">+ إضافة بند</button></div>`;
+    wrap.appendChild(sec);
+  });
+}
+
+function itemRowHTML(item,catTotal){
+  const pct=catTotal>0?(item.amount/catTotal*100):0;const cat=CATS[item.cat];
+  const accLabel=item.account==='001'?'ح.001':item.account==='003'?'ح.003':item.account==='005'?'ح.005':'خالد بوبيان';
+  return `<div class="item-row"><div class="item-info"><div class="item-name">${item.name}<span class="item-account-tag">${accLabel}</span></div>${item.note?`<div class="item-note">${item.note}</div>`:''}</div><div class="item-mini-bar"><div class="item-mini-fill" style="width:${pct}%;background:${cat.dot}"></div></div><div class="item-amount">${fmt(item.amount)}</div><div class="item-actions"><button class="icon-btn edit" onclick="openModal(${item.id})">✏️</button><button class="icon-btn del" onclick="deleteItem(${item.id})">×</button></div></div>`;
+}
+
+window.openModal=function(id,catKey){
+  window.editingId=id;
+  if(id!==null){
+    const item=window.items.find(i=>i.id===id);
+    document.getElementById('modal-title').textContent='تعديل البند';
+    document.getElementById('modal-save-btn').textContent='حفظ';
+    document.getElementById('new-name').value=item.name;
+    document.getElementById('new-amount').value=item.amount;
+    document.getElementById('new-cat').value=item.cat;
+    document.getElementById('new-account').value=item.account;
+    document.getElementById('new-note').value=item.note;
+  }else{
+    document.getElementById('modal-title').textContent='إضافة بند جديد';
+    document.getElementById('modal-save-btn').textContent='إضافة';
+    document.getElementById('new-name').value='';document.getElementById('new-amount').value='';
+    document.getElementById('new-cat').value=catKey||'aaila';document.getElementById('new-account').value='001';
+    document.getElementById('new-note').value='';
+  }
+  document.getElementById('modal').classList.add('open');bindArabicInputs();
+};
+window.closeModal=function(){document.getElementById('modal').classList.remove('open');window.editingId=null;};
+
+window.saveItem=function(){
+  const name=document.getElementById('new-name').value.trim();
+  const amount=parseNum(document.getElementById('new-amount').value);
+  const cat=document.getElementById('new-cat').value;
+  const account=document.getElementById('new-account').value;
+  const note=document.getElementById('new-note').value.trim();
+  if(!name){document.getElementById('new-name').focus();return;}
+  if(window.editingId!==null){
+    const item=window.items.find(i=>i.id===window.editingId);
+    if(item){item.name=name;item.amount=amount;item.cat=cat;item.account=account;item.note=note;item.net=account==='001';}
+  }else{
+    window.items.push({id:window.nextId++,name,amount,cat,account,note,net:account==='001'});
+  }
+  if(account==='bobian'){document.getElementById('acc-bobian').value=amount;}
+  closeModal();recalc();saveMonth();
+};
+
+window.deleteItem=function(id){window.items=window.items.filter(i=>i.id!==id);recalc();saveMonth();};
+
+window.updateSalary=function(){
+  const v=parseNum(document.getElementById('salary-input').value);
+  if(v>0){window.salary=v;document.getElementById('salary-display').textContent=v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});document.getElementById('salary-input').value='';recalc();saveMonth();}
+};
+
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+function initApp(){const curKey=currentMonthKey();buildMonthSelect(curKey);switchMonth(curKey);}
+bindArabicInputs();
+</script>
+</body>
+</html>
